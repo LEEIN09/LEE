@@ -5,10 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#ffffff" />
   <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="data:;base64,iVBORw0KGgo="> <!-- 임시 favicon으로 404 오류 방지 -->
 
+  <!-- 라이브러리 스크립트: 페이지 로드 시 한 번만 로드됩니다. -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <title>홈 | 안면근육 재활</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=SUIT:wght@400;600&display=swap" rel="stylesheet">
@@ -16,102 +19,22 @@
   body {
     margin: 0;
     padding: 0;
-    height: 100dvh; 
+    height: 100dvh;
     font-family: 'SUIT', sans-serif;
     background-color: white;
     color: #333;
     display: flex;
     flex-direction: column;
+    opacity: 0; /* 초기에는 숨김 (스크립트로 loaded 클래스 추가 시 표시) */
+    transition: opacity 0.4s ease-in-out; /* 부드러운 전환 효과 */
   }
 
-  header {
-    height: 14vh;
-    background: linear-gradient(90deg, #69b7ff, #a17fff);
-    color: white;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 22px;
-    font-weight: bold;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  body.loaded {
+    opacity: 1;
   }
 
-  h2 {
-    height: 8vh;
-    font-size: 18px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding-bottom: 0;
-  }
-
-  .button-group {
-    height: 72vh;
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 40px;
-    margin-bottom: 6vh;
-  }
-
-  .mode-box {
-    width: 40vw;
-    height: 60vh;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4vh;
-    box-sizing: border-box;
-    gap: 3vh;
-  }
-
-  .mode-box img {
-    width: 100%;
-    height: 80%;
-    object-fit: cover;
-    display: block;
-  }
-
-  .mode-box button {
-    width: 60%;
-    padding: 10px;
-    font-size: 16px;
-    font-weight: bold;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-
-  .mode-left {
-    background: 
-      linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.5)), 
-      url('static/images/space.png');
-    background-size: cover;
-    background-position: center;
-  }
-
-  .mode-left button {
-    background-color: rgba(138, 43, 226, 0.85);
-  }
-
-  .mode-right {
-    background: 
-      linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.5)), 
-      url('static/images/grass.png');
-    background-size: cover;
-    background-position: center;
-  }
-
-  .mode-right button {
-    background-color: rgba(56, 142, 60, 0.9);
+  body.fade-out {
+    opacity: 0;
   }
 
   .home-button {
@@ -129,99 +52,469 @@
     font-size: 14px;
   }
 
-  /* 💻 데스크탑 대응 */
+  /* 🎙️ 음성 토글 버튼 스타일 */
+  .voice-toggle {
+    position: fixed;
+    top: 10px;
+    right: 140px;
+    z-index: 1000;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.9);
+    border: 2px solid #667eea;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+  }
+
+  /* 🆕 음성 설정 버튼 스타일 */
+  .voice-settings-toggle {
+    position: fixed;
+    top: 10px;
+    right: 80px;
+    z-index: 1000;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.9);
+    border: 2px solid #9333ea;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+  }
+
+  .voice-settings-toggle:hover {
+    background: #9333ea;
+    color: white;
+    transform: scale(1.1);
+  }
+
+  .voice-toggle:hover {
+    background: #667eea;
+    color: white;
+    transform: scale(1.1);
+  }
+
+  .voice-toggle.speaking {
+    animation: voicePulse 1s infinite;
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: white;
+  }
+
+  .voice-toggle.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  @keyframes voicePulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.1);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.8);
+    }
+  }
+
+  /* 🎯 음성 가이드 패널 */
+  .voice-guide-panel {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px;
+    border-radius: 12px;
+    margin: 10px auto;
+    max-width: 90%;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    text-align: center;
+    transition: all 0.4s ease;
+    position: fixed;
+    top: 150px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+  }
+
+  .voice-guide-panel.hidden {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+    pointer-events: none;
+  }
+
+  /* 🆕 슬라이드 업 애니메이션 */
+  .voice-guide-panel.slide-up {
+    animation: slideUpAndFade 0.6s ease-out forwards;
+  }
+
+  @keyframes slideUpAndFade {
+    0% {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-30px);
+    }
+  }
+
+  .guide-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .guide-content {
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  .guide-tips {
+    background: rgba(255,255,255,0.1);
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    border-left: 4px solid #fff;
+  }
+
+  /* 🆕 음성 설정 패널 */
+  .voice-settings-panel {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    width: 280px;
+    background: white;
+    border: 2px solid #9333ea;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    z-index: 1001;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+
+  .voice-settings-panel.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+  }
+
+  .settings-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #9333ea;
+    margin-bottom: 15px;
+    text-align: center;
+  }
+
+  .setting-group {
+    margin-bottom: 15px;
+  }
+
+  .setting-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+  }
+
+  .setting-control {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+
+  .setting-control:focus {
+    outline: none;
+    border-color: #9333ea;
+    box-shadow: 0 0 5px rgba(147, 51, 234, 0.3);
+  }
+
+  .range-input {
+    width: 100%;
+    margin: 5px 0;
+  }
+
+  .range-value {
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+  }
+
+  .test-voice-btn, .save-settings-btn {
+    width: 48%;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    margin-top: 10px;
+  }
+
+  .test-voice-btn {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .test-voice-btn:hover {
+    background: #2563eb;
+  }
+
+  .save-settings-btn {
+    background: #10b981;
+    color: white;
+  }
+
+  .save-settings-btn:hover {
+    background: #059669;
+  }
+
+  .save-settings-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+
+  .settings-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .close-settings-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #999;
+  }
+
+  .close-settings-btn:hover {
+    color: #333;
+  }
+  /* 🆕 ESC 키 안내 스타일 */
+  .esc-hint {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    z-index: 1001;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+
+  .esc-hint.show {
+    opacity: 1;
+  }
+
   @media screen and (min-width: 1024px), (hover: hover) and (pointer: fine) {
-    header {
-      height: 100px;
-      font-size: 28px;
-    }
-
-    h2 {
-      height: 100px;
-      font-size: 26px;
-    }
-
-    .button-group {
-      height: 60vh;
-      margin-top: 20px;
-      margin-bottom: 20px;
-      gap: 100px;
-    }
-
-    .mode-box {
-      width: 400px;
-      height: 350px;
-      padding: 20px;
-      gap: 20px;
-    }
-
-    .mode-box button {
-      font-size: 22px;
-      padding: 10px;
-    }
-
     .home-button {
-      position: fixed;
       top: 24px;
       left: 24px;
-      background: #ff4081;
-      color: white;
-      padding: 8px 16px;
-      font-weight: bold;
-      border-radius: 6px;
-      box-shadow: 0 0 8px #ff4081;
-      z-index: 999;
-      text-decoration: none;
       font-size: 20px;
+      padding: 8px 16px;
+    }
+
+    .voice-toggle {
+      top: 24px;
+      right: 140px;
+      width: 50px;
+      height: 50px;
+      font-size: 20px;
+    }
+
+    .voice-settings-toggle {
+      top: 24px;
+      right: 80px;
+      width: 50px;
+      height: 50px;
+      font-size: 20px;
+    }
+
+    .voice-settings-panel {
+      top: 85px;
+      right: 24px;
+      width: 320px;
+    }
+
+    .voice-guide-panel {
+      padding: 20px;
+      max-width: 600px;
+      top: 140px;
+    }
+
+    .guide-title {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .guide-content {
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+
+    .guide-tips {
+      padding: 15px;
+      font-size: 13px;
+    }
+
+    .esc-hint {
+      bottom: 30px;
+      right: 30px;
+      font-size: 14px;
+      padding: 10px 15px;
     }
   }
 </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <audio id="metal_click" src="/static/sounds/metal_click.mp3"></audio>
-  <audio id="click_sound" src="/static/sounds/click_sound.wav"></audio>
+  <!-- ▼▼▼ [추가] 오디오 파일 로드 ▼▼▼ -->
+  <audio id="metal_click" src="/static/sounds/metal_click.mp3" preload="auto"></audio>
+  <audio id="click_sound" src="/static/sounds/click_sound.wav" preload="auto"></audio>
 
-  <div id="app">
-    <header>SMILE FIT</header>
-    <h2>원하는 모드를 선택하세요</h2>
-    <div class="button-group">
-      <div class="mode-box mode-left">
-        <img src="static/images/game.png" alt="게임 모드 이미지">
-        <button onclick="metalClickSound(); loadPage('game_mode')">게임 모드</button>
-      </div>
-      <div class="mode-box mode-right">
-        <img src="static/images/rehab.png" alt="재활 모드 이미지">
-        <button onclick="ClickSound(); loadPage('rehab_mode')">재활 모드</button>
-      </div>
+  <!-- 메인 콘텐츠가 표시될 영역 -->
+  <div id="app"></div>
+
+  <!-- HOME 버튼 -->
+  <a href="#" class="home-button" onclick="loadPage('index'); return false;">HOME</a>
+
+  <!-- 🎙️ 음성 토글 버튼 추가 -->
+  <div class="voice-toggle" onclick="toggleVoice()" title="음성 안내 켜기/끄기 (ESC로 중단)" id="voiceToggle">
+    <span id="voiceIcon">🔇</span>
+  </div>
+
+  <!-- 🆕 음성 설정 버튼 추가 -->
+  <div class="voice-settings-toggle" onclick="toggleVoiceSettings()" title="음성 설정" id="voiceSettingsToggle">
+    <span>⚙️</span>
+  </div>
+
+  <!-- 🆕 음성 설정 패널 (목소리 선택 제거됨) -->
+  <div class="voice-settings-panel" id="voiceSettingsPanel">
+    <button class="close-settings-btn" onclick="toggleVoiceSettings()">×</button>
+    <div class="settings-title">🎙️ 음성 설정</div>
+
+    <div class="setting-group">
+      <label class="setting-label">말하는 속도</label>
+      <input type="range" class="range-input" id="rateRange" min="0.5" max="2" step="0.1" value="1">
+      <div class="range-value" id="rateValue">1.0x</div>
+    </div>
+
+    <div class="setting-group">
+      <label class="setting-label">볼륨</label>
+      <input type="range" class="range-input" id="volumeRange" min="0" max="1" step="0.1" value="0.8">
+      <div class="range-value" id="volumeValue">80%</div>
+    </div>
+
+    <div class="setting-group">
+      <label class="setting-label">음성 높낮이</label>
+      <input type="range" class="range-input" id="pitchRange" min="0.5" max="2" step="0.1" value="1">
+      <div class="range-value" id="pitchValue">1.0</div>
+    </div>
+
+    <div class="settings-buttons">
+      <button class="test-voice-btn" onclick="testVoiceSettings()">
+        🔊 테스트
+      </button>
+      <button class="save-settings-btn" onclick="saveVoiceSettings()" id="saveSettingsBtn">
+        💾 저장
+      </button>
     </div>
   </div>
 
-<a href="#" class="home-button" onclick="loadPage('index'); return false;">HOME</a>
+  <!-- 🎯 음성 가이드 패널 추가 -->
+  <div class="voice-guide-panel" id="voiceGuidePanel">
+    <div class="guide-title">
+      <span>🎙️</span>
+      <span>음성 안내로 더 쉽게!</span>
+    </div>
+    <div class="guide-content">
+      스마일핏이 친근한 목소리로 운동을 도와드려요!<br>
+      오른쪽 위 스피커 버튼을 눌러 음성 안내를 시작해보세요.
+    </div>
+    <div class="guide-tips">
+      💡 <strong>팁:</strong> 음성 안내는 언제든 켜고 끌 수 있어요 • ESC 키로 중단 가능
+    </div>
+  </div>
+
+  <!-- 🆕 ESC 키 안내 -->
+  <div class="esc-hint" id="escHint">
+    ESC 키를 누르면 음성이 중단됩니다
+  </div>
 
   <script>
+    // ★★★★★ [수정] 페이지가 처음 로드될 때 초기 콘텐츠를 불러옵니다. ★★★★★
     window.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add('loaded');
-      loadPage('index');
+      loadPage('index'); // 초기 페이지로 index.html을 로드합니다.
+
+      // 음성 시스템 초기화
+      voiceSystem = new SmileFitVoiceSystem('default');
+
+      // 🆕 음성 설정 리스너 설정
+      setupVoiceSettingsListeners();
+
+      setTimeout(() => {
+        // 음성 상태 업데이트 (기본값: 꺼짐)
+        voiceSystem.updateUI(false);
+
+        // 🆕 기본값이 꺼져있으므로 환영 메시지 재생하지 않음
+        console.log('🔇 음성 안내 기본값: 꺼짐 상태');
+      }, 1000);
     });
 
+    // ▼▼▼ [추가] 사운드 재생 함수 ▼▼▼
     function metalClickSound() {
       const sound = document.getElementById('metal_click');
-      sound.currentTime = 0;
-      sound.play();
+      if (sound) {
+        sound.currentTime = 0;
+        sound.play().catch(e => console.warn("소리 재생 오류(metal_click):", e));
+      }
     }
 
     function ClickSound() {
       const sound = document.getElementById('click_sound');
-      sound.currentTime = 0;
-      sound.play();
+      if (sound) {
+        sound.currentTime = 0;
+        sound.play().catch(e => console.warn("소리 재생 오류(click_sound):", e));
+      }
     }
 
     const routes = {
       'index': '/pages/index.html',
-      'game_follow': '/pages/game_follow.html',
       'game_mode': '/pages/game_mode.html',
-      'game_emotion': '/pages/game_emotion.html',
       'rehab_mode': '/pages/rehab_mode.html',
       'complex': '/pages/complex.html',
       'complex_fit': '/pages/complex_fit.html',
@@ -229,80 +522,508 @@
       'focus_fit': '/pages/focus_fit.html',
       'complex_feedback': '/pages/complex_feedback.html',
       'focus_feedback': '/pages/focus_feedback.html',
-      'face_emotion': '/tower_defense_game.html?mode=emotion_expression',
-      'face_follow': '/tower_defense_game.html?mode=follow_expression'
+      'next_set_guidance': '/pages/next_set_guidance.html',
+      'face_emotion': '/pages/face_emotion.html',
+      'face_follow': '/pages/face_follow.html',
+      'normal_feedback': '/pages/normal_feedback.html'
     };
 
     let currentModule = null;
     const pageCache = new Map();
 
-async function loadPage(route) {
-  const path = routes[route];
-  if (!path) return;
-
-  // ✅ 기존 페이지 전환 로직 유지
-  if (currentModule?.cleanup) currentModule.cleanup();
-  document.body.classList.remove('loaded');
-  document.body.classList.add('fade-out');
-
-  if (!route.startsWith("face_")) {
-    try {
-      const version = "1.0.4";
-      const module = await import(`/scripts/${route}.js?v=${version}`);
-      currentModule = module;
-      if (module?.init) module.init();
-    } catch (e) {
-      console.warn(`⚠️ ${route}.js 없음 또는 import 실패`, e);
-    }
-  }
-
-  setTimeout(async () => {
-    try {
-      let html;
-      if (pageCache.has(route)) {
-        html = pageCache.get(route);
-      } else {
-        const res = await fetch(path);
-        html = await res.text();
-        pageCache.set(route, html);
+    async function loadPage(routeKey) {
+      const path = routes[routeKey];
+      if (!path) {
+        console.error(`라우트를 찾을 수 없습니다: ${routeKey}`);
+        return;
       }
 
-      const temp = document.createElement('div');
-      temp.innerHTML = html;
-      document.getElementById('app').innerHTML = temp.innerHTML;
+      if (currentModule && typeof currentModule.cleanup === 'function') {
+        try {
+          currentModule.cleanup();
+        } catch (e) { console.error("Cleanup 오류:", e); }
+      }
+      currentModule = null;
 
-      try {
-        const version = "1.0.4";
-        const module = await import(`/scripts/${route}.js?v=${version}`);
-        currentModule = module;
-        if (module?.init) module.init();
-      } catch (e) {
-        console.warn(`⚠️ ${route}.js 없음 또는 import 실패`, e);
+      document.body.style.opacity = '0';
+
+      setTimeout(async () => {
+        try {
+          let htmlContent;
+          if (pageCache.has(routeKey)) {
+            htmlContent = pageCache.get(routeKey);
+          } else {
+            const response = await fetch(path);
+            if (!response.ok) throw new Error(`HTTP ${response.status} 오류`);
+            htmlContent = await response.text();
+            pageCache.set(routeKey, htmlContent);
+          }
+
+          const appContainer = document.getElementById('app');
+          appContainer.innerHTML = htmlContent;
+
+          try {
+            const version = new Date().getTime(); // 캐시 방지용 타임스탬프
+            const modulePath = `/scripts/${routeKey}.js?v=${version}`;
+            const module = await import(modulePath);
+            currentModule = module;
+            if (module && typeof module.init === 'function') {
+              console.log(`✅ ${routeKey}.js 모듈 로드 성공. init() 실행.`);
+              module.init();
+            }
+          } catch (e) {
+            if (!routeKey.startsWith("face_")) {
+               console.warn(`'${routeKey}.js' 스크립트 없음 (정상일 수 있음)`);
+            } else {
+               console.error(`'${routeKey}.js' 스크립트 로드 실패!`, e);
+            }
+          }
+
+          document.body.style.opacity = '1';
+
+          // 🎙️ 페이지 로드 완료 시 음성 안내 (기존 음성 중단하고 새 메시지 재생)
+          if (voiceSystem && voiceSystem.isEnabled) {
+            // 기존 음성 즉시 중단
+            voiceSystem.stop();
+            // 새 페이지 음성 안내 (우선순위 high로 즉시 재생)
+            setTimeout(() => {
+              announcePageLoad(routeKey);
+            }, 200); // 짧은 딜레이로 부드럽게 전환
+          }
+
+        } catch (error) {
+          console.error(`❌ 페이지 로딩 실패 [${routeKey}]:`, error);
+          document.body.style.opacity = '1';
+        }
+      }, 400);
+    }
+
+    // 🎙️ SMILE FIT 통합 음성 시스템
+    class SmileFitVoiceSystem {
+      constructor(pageType = 'default') {
+        this.synthesis = window.speechSynthesis;
+        this.isEnabled = localStorage.getItem('smileFitVoiceEnabled') === 'true'; // 기본값: false (꺼짐)
+        this.pageType = pageType;
+        this.settings = this.getSettingsForPage(pageType);
+        this.currentUtterance = null;
+        this.isInitialized = false;
+        this.isSpeaking = false;
+
+        this.initVoices();
+        this.setupKeyboardListeners(); // 🆕 키보드 리스너 설정
+
+        console.log(`🎙️ SMILE FIT 음성 시스템 초기화: ${pageType} 모드 (기본값: 꺼짐)`);
       }
 
-      document.body.classList.remove('fade-out');
-      document.body.classList.add('loaded');
-    } catch (e) {
-      console.error('❌ 페이지 로딩 실패:', e);
+      // 페이지별 음성 설정
+      getSettingsForPage(pageType) {
+        const savedSettings = this.loadUserSettings();
+
+        const defaultSettings = {
+          default: { rate: 1.0, volume: 0.8, pitch: 1.0 },
+          game: { rate: 1.1, volume: 0.9, pitch: 1.1 },
+          rehab: { rate: 0.9, volume: 0.8, pitch: 1.0 },
+          exercise: { rate: 0.8, volume: 0.9, pitch: 1.0 }
+        };
+
+        const baseSettings = defaultSettings[pageType] || defaultSettings.default;
+        return { ...baseSettings, ...savedSettings, lang: 'ko-KR' };
+      }
+
+      // 🆕 사용자 설정 저장
+      saveUserSettings() {
+        const settings = {
+          rate: this.settings.rate,
+          volume: this.settings.volume,
+          pitch: this.settings.pitch
+        };
+        localStorage.setItem('smileFitVoiceSettings', JSON.stringify(settings));
+      }
+
+      // 🆕 사용자 설정 불러오기
+      loadUserSettings() {
+        try {
+          const saved = localStorage.getItem('smileFitVoiceSettings');
+          return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+          console.warn('음성 설정 불러오기 실패:', e);
+          return {};
+        }
+      }
+
+      // 🆕 설정 업데이트 (임시 적용)
+      updateSettingsTemporary(newSettings) {
+        Object.assign(this.settings, newSettings);
+        console.log('🎛️ 음성 설정 임시 적용:', newSettings);
+      }
+
+      // 🆕 설정 업데이트 및 저장
+      updateSettingsAndSave(newSettings) {
+        Object.assign(this.settings, newSettings);
+        this.saveUserSettings();
+        console.log('🎛️ 음성 설정 저장 완료:', newSettings);
+      }
+
+      // 🆕 키보드 이벤트 리스너 설정
+      setupKeyboardListeners() {
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && this.isSpeaking) {
+            console.log('🔇 ESC 키로 음성 중단');
+            this.stop();
+            this.showEscHint(false); // ESC 힌트 숨김
+          }
+        });
+      }
+
+      // 🆕 ESC 힌트 표시/숨김
+      showEscHint(show) {
+        const escHint = document.getElementById('escHint');
+        if (!escHint) return;
+
+        if (show) {
+          escHint.classList.add('show');
+        } else {
+          escHint.classList.remove('show');
+        }
+      }
+
+      // 음성 초기화
+      initVoices() {
+        const loadVoices = () => {
+          this.voices = this.synthesis.getVoices();
+          this.koreanVoice = this.voices.find(voice =>
+            voice.lang.includes('ko') ||
+            voice.name.includes('Korean') ||
+            voice.name.includes('한국')
+          );
+
+          if (this.koreanVoice) {
+            this.settings.voice = this.koreanVoice;
+          }
+
+          this.isInitialized = true;
+
+          console.log(`🎙️ 음성 로드 완료: ${this.voices.length}개 음성 사용 가능`);
+          if (this.koreanVoice) {
+            console.log(`🇰🇷 한국어 음성 선택: ${this.koreanVoice.name}`);
+          }
+        };
+
+        if (this.synthesis.getVoices().length > 0) {
+          loadVoices();
+        } else {
+          this.synthesis.onvoiceschanged = loadVoices;
+        }
+      }
+
+      // 음성 출력
+      speak(text, callback = null, priority = 'normal') {
+        if (!this.isEnabled || !this.synthesis) {
+          console.log('🔇 음성 안내가 비활성화되어 있습니다');
+          return;
+        }
+
+        if (priority === 'high' || priority === 'page_change') {
+          this.synthesis.cancel();
+          this.isSpeaking = false;
+        }
+        else if (this.isSpeaking) {
+          console.log('🔇 이미 음성이 재생 중입니다');
+          return;
+        }
+
+        this.currentUtterance = new SpeechSynthesisUtterance(text);
+        Object.assign(this.currentUtterance, this.settings);
+
+        if (this.settings.voice) {
+          this.currentUtterance.voice = this.settings.voice;
+        } else if (this.koreanVoice) {
+          this.currentUtterance.voice = this.koreanVoice;
+        }
+
+        this.currentUtterance.onstart = () => {
+          this.isSpeaking = true;
+          this.updateUI(true);
+          this.showEscHint(true);
+          console.log('🗣️ 음성 재생 시작:', text.substring(0, 30) + '...');
+        };
+
+        this.currentUtterance.onend = () => {
+          this.isSpeaking = false;
+          this.updateUI(false);
+          this.showEscHint(false);
+          console.log('✅ 음성 재생 완료');
+          if (callback) callback();
+        };
+
+        this.currentUtterance.onerror = (event) => {
+          this.isSpeaking = false;
+          this.updateUI(false);
+          this.showEscHint(false);
+          console.error('❌ 음성 재생 오류:', event.error);
+        };
+
+        this.synthesis.speak(this.currentUtterance);
+      }
+
+      // 음성 안내 켜기/끄기
+      toggle() {
+        this.isEnabled = !this.isEnabled;
+        localStorage.setItem('smileFitVoiceEnabled', this.isEnabled);
+
+        if (!this.isEnabled) {
+          this.stop();
+        }
+
+        this.updateUI(false);
+        console.log('🎛️ 음성 안내:', this.isEnabled ? '활성화' : '비활성화');
+
+        this.toggleGuidePanel();
+
+        return this.isEnabled;
+      }
+
+      // 음성 중지
+      stop() {
+        this.synthesis.cancel();
+        this.isSpeaking = false;
+        this.updateUI(false);
+        this.showEscHint(false);
+      }
+
+      // UI 업데이트
+      updateUI(isSpeaking) {
+        const toggle = document.getElementById('voiceToggle');
+        const icon = document.getElementById('voiceIcon');
+
+        if (!toggle || !icon) return;
+
+        if (isSpeaking) {
+          toggle.classList.add('speaking');
+          icon.textContent = '🔊';
+        } else {
+          toggle.classList.remove('speaking');
+          icon.textContent = this.isEnabled ? '🔊' : '🔇';
+        }
+
+        if (!this.isSupported()) {
+          toggle.classList.add('disabled');
+          icon.textContent = '❌';
+        }
+      }
+
+      // 🆕 가이드 패널 토글
+      toggleGuidePanel() {
+        const panel = document.getElementById('voiceGuidePanel');
+        if (!panel) return;
+
+        if (this.isEnabled) {
+          panel.classList.add('slide-up');
+          setTimeout(() => {
+            panel.classList.add('hidden');
+            panel.classList.remove('slide-up');
+          }, 600);
+        } else {
+          panel.classList.remove('hidden', 'slide-up');
+        }
+      }
+
+      // 브라우저 지원 여부 확인
+      isSupported() {
+        return 'speechSynthesis' in window;
+      }
     }
-  }, 400);
-}
 
+    // 전역 음성 시스템 인스턴스
+    let voiceSystem = null;
 
+    // 🆕 음성 설정 패널 토글
+    function toggleVoiceSettings() {
+      const panel = document.getElementById('voiceSettingsPanel');
+      if (!panel) return;
 
+      panel.classList.toggle('show');
 
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("/serviceWorker.js")
-          .then(() => console.log("✅ Service Worker registered"))
-          .catch((err) => console.error("❌ Service Worker registration failed:", err));
+      if (panel.classList.contains('show') && voiceSystem) {
+        updateSettingsUI();
+        const saveBtn = document.getElementById('saveSettingsBtn');
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.textContent = '💾 저장';
+          saveBtn.style.background = '#9ca3af';
+        }
+      }
+    }
+
+    // 🆕 설정 UI 업데이트
+    function updateSettingsUI() {
+      if (!voiceSystem) return;
+
+      const rateRange = document.getElementById('rateRange');
+      const volumeRange = document.getElementById('volumeRange');
+      const pitchRange = document.getElementById('pitchRange');
+      const rateValue = document.getElementById('rateValue');
+      const volumeValue = document.getElementById('volumeValue');
+      const pitchValue = document.getElementById('pitchValue');
+
+      if (rateRange) {
+        rateRange.value = voiceSystem.settings.rate;
+        if (rateValue) rateValue.textContent = voiceSystem.settings.rate + 'x';
+      }
+      if (volumeRange) {
+        volumeRange.value = voiceSystem.settings.volume;
+        if (volumeValue) volumeValue.textContent = Math.round(voiceSystem.settings.volume * 100) + '%';
+      }
+      if (pitchRange) {
+        pitchRange.value = voiceSystem.settings.pitch;
+        if (pitchValue) pitchValue.textContent = voiceSystem.settings.pitch.toFixed(1);
+      }
+    }
+
+    // 🆕 음성 설정 테스트
+    function testVoiceSettings() {
+      if (!voiceSystem) return;
+
+      const rate = parseFloat(document.getElementById('rateRange').value);
+      const volume = parseFloat(document.getElementById('volumeRange').value);
+      const pitch = parseFloat(document.getElementById('pitchRange').value);
+
+      const newSettings = { rate, volume, pitch };
+      voiceSystem.updateSettingsTemporary(newSettings);
+      voiceSystem.speak('음성 테스트입니다.', null, 'high');
+      enableSaveButton();
+    }
+
+    // 🆕 음성 설정 저장
+    function saveVoiceSettings() {
+      if (!voiceSystem) return;
+
+      const rate = parseFloat(document.getElementById('rateRange').value);
+      const volume = parseFloat(document.getElementById('volumeRange').value);
+      const pitch = parseFloat(document.getElementById('pitchRange').value);
+
+      const newSettings = { rate, volume, pitch };
+      voiceSystem.updateSettingsAndSave(newSettings);
+
+      const saveBtn = document.getElementById('saveSettingsBtn');
+      if (saveBtn) {
+        saveBtn.textContent = '✅ 저장완료';
+        saveBtn.style.background = '#059669';
+
+        setTimeout(() => {
+          saveBtn.textContent = '💾 저장';
+          saveBtn.style.background = '#10b981';
+          saveBtn.disabled = true;
+        }, 2000);
+      }
+
+      setTimeout(() => {
+        voiceSystem.speak('설정이 저장되었습니다.', null, 'high');
+      }, 500);
+    }
+
+    // 🆕 저장 버튼 활성화 함수
+    function enableSaveButton() {
+      const saveBtn = document.getElementById('saveSettingsBtn');
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 저장';
+        saveBtn.style.background = '#10b981';
+      }
+    }
+
+    // 🆕 설정 변경 이벤트 리스너들
+    function setupVoiceSettingsListeners() {
+      const rateRange = document.getElementById('rateRange');
+      const volumeRange = document.getElementById('volumeRange');
+      const pitchRange = document.getElementById('pitchRange');
+
+      if (rateRange) {
+        rateRange.addEventListener('input', (e) => {
+          document.getElementById('rateValue').textContent = e.target.value + 'x';
+          enableSaveButton();
+        });
+      }
+
+      if (volumeRange) {
+        volumeRange.addEventListener('input', (e) => {
+          document.getElementById('volumeValue').textContent = Math.round(e.target.value * 100) + '%';
+          enableSaveButton();
+        });
+      }
+
+      if (pitchRange) {
+        pitchRange.addEventListener('input', (e) => {
+          document.getElementById('pitchValue').textContent = parseFloat(e.target.value).toFixed(1);
+          enableSaveButton();
+        });
+      }
+
+      document.addEventListener('click', (e) => {
+        const panel = document.getElementById('voiceSettingsPanel');
+        const toggle = document.getElementById('voiceSettingsToggle');
+
+        if (panel && panel.classList.contains('show') &&
+            !panel.contains(e.target) && !toggle.contains(e.target)) {
+          panel.classList.remove('show');
+        }
       });
     }
+
+    // 🔧 음성 토글 함수
+    function toggleVoice() {
+      if (!voiceSystem) {
+        console.error('❌ 음성 시스템이 초기화되지 않았습니다');
+        return;
+      }
+
+      if (!voiceSystem.isSupported()) {
+        alert('죄송합니다. 이 브라우저는 음성 안내를 지원하지 않습니다.\n\nChrome, Edge, Firefox를 사용하시거나 브라우저를 최신 버전으로 업데이트해주세요.');
+        return;
+      }
+
+      const isEnabled = voiceSystem.toggle();
+
+      if (isEnabled) {
+        voiceSystem.speak('음성 안내를 시작합니다. 스마일핏과 함께 건강한 표정 운동을 해보세요!', null, 'high');
+      } else {
+        voiceSystem.stop();
+      }
+    }
+
+    // 🎙️ 페이지별 음성 안내 함수
+    function announcePageLoad(routeKey) {
+      const announcements = {
+        'index': '스마일핏에 오신 것을 환영합니다! 게임 모드와 재활 모드 중 원하는 것을 선택해주세요.',
+        'game_mode': '게임 모드입니다. 표정 따라하기와 감정 표현하기 중 선택해주세요.',
+        'rehab_mode': '재활 모드입니다. 집중운동과 복합운동 중 선택해주세요.',
+        'complex': '복합운동 선생님 선택 화면입니다. 함께 운동할 선생님을 골라주세요.',
+        'focus': '집중운동 부위 선택 화면입니다. 운동할 부위를 선택해주세요.',
+        'complex_fit': '복합운동을 시작합니다. 화면의 기준 이미지를 보고 따라해주세요.',
+        'focus_fit': '집중운동을 시작합니다. 화면의 기준 이미지를 보고 따라해주세요.',
+        'complex_feedback': '복합운동 결과입니다. 상세한 분석 결과를 확인해보세요.',
+        'focus_feedback': '집중운동 결과입니다. 상세한 분석 결과를 확인해보세요.'
+      };
+
+      const message = announcements[routeKey];
+      if (message) {
+        setTimeout(() => {
+          voiceSystem.speak(message, null, 'page_change');
+        }, 300);
+      }
+    }
+
+    // 🧪 개발자 도구용 디버깅 함수
+    window.debugVoice = {
+      status: () => voiceSystem ? voiceSystem.getStatus() : 'Not initialized',
+      speak: (text) => voiceSystem ? voiceSystem.speak(text, null, 'high') : 'Not initialized',
+      toggle: () => toggleVoice(),
+      stop: () => voiceSystem ? voiceSystem.stop() : 'Not initialized'
+    };
+
+    console.log('🎙️ SMILE FIT SPA 음성 시스템 로드 완료!');
+    console.log('💡 개발자 도구에서 window.debugVoice로 테스트 가능');
+
   </script>
- 
-  
-
-
 </body>
 </html>

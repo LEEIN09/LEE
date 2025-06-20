@@ -1,6 +1,6 @@
 // ✅ 감정 표현하기 모드: face_emotion.js
 
-let currentSessionTotalScore = 0;
+// let currentSessionTotalScore = 0;
 let sessionTotalScoreDisplayElement = null;
 
 let faceApiModelLoaded_Emotion = false;
@@ -16,6 +16,7 @@ const sessionTotalDisplay = document.getElementById("session-total-score-display
 const baseImagePath = "/static/images/e_game/";
 const emotionImageIndices = Array.from({ length: 50 }, (_, i) => i + 1);
 let currentImageIndex = 0;
+
 
 async function startVideoForEmotionMode(videoElement, callbackWhenReady) {
   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -57,7 +58,7 @@ async function loadNextEmotionImage() {
   currentImageIndex = emotionImageIndices[Math.floor(Math.random() * emotionImageIndices.length)];
   const imageUrl = `${baseImagePath}e${currentImageIndex}.png`;
   emotionReferenceImg.src = imageUrl;
-  emotionRefEmotionDisplay.innerText = "기준 감정: 분석 중...";
+  emotionRefEmotionDisplay.innerText = "기준 감정: -";
   emotionUserEmotionDisplay.innerText = "당신 감정: -";
   emotionScoreDisplay.innerText = "이번 점수: -";
 }
@@ -78,11 +79,26 @@ async function recognizeExpressions(img) {
 }
 
 async function handleEmotionCapture() {
+
+    if (!emotionReferenceImg.complete) {
+    console.log("⏳ 기준 이미지 로딩 대기 중...");
+    await new Promise(resolve => {
+      emotionReferenceImg.onload = () => {
+        console.log("✅ 기준 이미지 로딩 완료");
+        resolve();
+      };
+    });
+  }
+
   const refResult = await recognizeExpressions(emotionReferenceImg);
   const userResult = await recognizeExpressions(emotionVideo);
+
+  console.log("📌 기준 감정:", refResult?.expressions);
+  console.log("📌 사용자 감정:", userResult?.expressions);
+
   if (!refResult || !userResult) {
     emotionScoreDisplay.innerText = "이번 점수: 분석 실패";
-    await loadNextEmotionImage(); // ✅ 이 줄 추가!
+    await loadNextEmotionImage(); 
     return;
     }
 
@@ -98,7 +114,9 @@ async function handleEmotionCapture() {
   emotionUserEmotionDisplay.innerHTML = `당신 감정: <b>${getTopEmotion(userResult.expressions)}</b>`;
   emotionRefEmotionDisplay.innerHTML = `기준 감정: <b>${getTopEmotion(refResult.expressions)}</b>`;
 
-  await loadNextEmotionImage();
+  setTimeout(() => {
+    loadNextEmotionImage();  
+  }, 2000); 
 }
 
 export async function setupEmotionMode() {
@@ -109,6 +127,18 @@ export async function setupEmotionMode() {
   emotionCaptureBtn.addEventListener("click", handleEmotionCapture);
 }
 
+function waitForVideoReady(video, callback) {
+  const check = () => {
+    if (video.videoWidth > 0 && video.videoHeight > 0) {
+      callback();
+    } else {
+      requestAnimationFrame(check);
+    }
+  };
+  check();
+}
+
+//========================================================================================================//
 
 import { loadUnityGame } from './unity_loader.js';
 
@@ -186,6 +216,11 @@ export async function ShowFacialRecognitionUI_JS(modeFromUnity, attempt = 1) {
   // 캠 시작
   await startVideoForEmotionMode(emotionVideo, () => {
     console.log("🎥 감정모드 캠 시작됨");
+
+    // 🎯 비디오가 제대로 그려진 뒤 캔버스 가이드라인 그리기
+    waitForVideoReady(emotionVideo, () => {
+      drawGuideEllipse(emotionGuideCanvas, emotionVideo);
+    });
   });
 
   // 첫 표정 세팅
@@ -196,10 +231,55 @@ export async function ShowFacialRecognitionUI_JS(modeFromUnity, attempt = 1) {
   btn?.addEventListener('click', handleEmotionCapture);
 }
 
+// ★★★★★[핵심] 페이지를 떠날 때 호출될 정리(cleanup) 함수 ★★★★★
+export function cleanup() {
+  console.log("🧹 face_emotion.js: cleanup 실행. 리소스를 정리합니다.");
+
+  // 1. 카메라 스트림 중지 (가장 중요!)
+  // closeFacialModal 함수에 이미 관련 로직이 있으므로 재활용하거나 직접 구현합니다.
+  const video = document.getElementById("emotion-video");
+  if (video && video.srcObject) {
+    const tracks = video.srcObject.getTracks();
+    tracks.forEach(track => track.stop()); // 모든 트랙(비디오, 오디오)을 중지
+    video.srcObject = null;
+    console.log("✅ [Cleanup] 카메라 스트림이 중지되었습니다.");
+  }
+
+  // 2. Unity 인스턴스 종료
+  // unity_loader.js에서 window.unityGameInstance 같은 전역 변수로 인스턴스를 관리한다고 가정합니다.
+  if (window.unityGameInstance && typeof window.unityGameInstance.Quit === 'function') {
+    window.unityGameInstance.Quit()
+      .then(() => {
+        console.log("✅ [Cleanup] Unity 인스턴스가 성공적으로 종료되었습니다.");
+        window.unityGameInstance = null; // 인스턴스 참조 제거
+      })
+      .catch((err) => {
+        console.error("❌ [Cleanup] Unity 인스턴스 종료 중 오류 발생:", err);
+        window.unityGameInstance = null; // 오류가 발생해도 참조는 제거
+      });
+  }
+
+  // 3. 이벤트 리스너 제거 (메모리 누수 방지)
+  const captureBtn = document.getElementById('emotion-captureBtn');
+  if (captureBtn) {
+    // handleEmotionCapture 함수에 대한 참조가 필요하지만,
+    // 간단하게는 버튼을 복제하여 리스너를 제거할 수 있습니다.
+    const newBtn = captureBtn.cloneNode(true);
+    captureBtn.parentNode.replaceChild(newBtn, captureBtn);
+    console.log("✅ [Cleanup] 이벤트 리스너가 정리되었습니다.");
+  }
+  
+  // 4. 전역에 할당된 함수 정리 (선택사항이지만 좋은 습관입니다)
+  if (window.ShowFacialRecognitionUI_JS === ShowFacialRecognitionUI_JS) {
+    window.ShowFacialRecognitionUI_JS = undefined;
+  }
+  if (window.closeFacialModal === closeFacialModal) {
+    window.closeFacialModal = undefined;
+  }
+}
+
 
 // ✅ 전역 등록
+
 window.ShowFacialRecognitionUI_JS = ShowFacialRecognitionUI_JS;
-
-
 window.closeFacialModal = closeFacialModal;
-window.ShowFacialRecognitionUI_JS = ShowFacialRecognitionUI_JS;

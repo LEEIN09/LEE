@@ -1,6 +1,9 @@
 // /scripts/unity_loader.js
+
 export function loadUnityGame() {
+  
   const canvas = document.getElementById("unity-canvas");
+  document.getElementById("unity-loading-bar").style.display = "block";
   const loaderUrl = "/static/unity_game_files/Build/towerdefense.loader.js";
 
   const config = {
@@ -13,13 +16,14 @@ export function loadUnityGame() {
     devicePixelRatio: 1,
   };
 
+
   const script = document.createElement("script");
   script.src = loaderUrl;
   script.onload = () => {
-    createUnityInstance(canvas, config, (progress) => {
+    createUnityInstance(canvas, config, (progress) => {      
       const bar = document.getElementById("unity-progress-bar-full");
       if (bar) bar.style.width = `${progress * 100}%`;
-    }).then((unityInstance) => {
+    }).then((unityInstance) => {      
       window.unityGameInstance = unityInstance;
       console.log("✅ Unity 인스턴스 생성 완료");
       const bar = document.getElementById("unity-loading-bar");

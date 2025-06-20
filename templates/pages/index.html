@@ -30,6 +30,7 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   }
 
+  /* 🆕 안내문구를 음성 패널 아래로 위치 */
   h2 {
     height: 8vh;
     font-size: 18px;
@@ -37,22 +38,26 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-bottom: 0;
+    padding: 1vh 0;
+    margin-top: 12vh; /* 음성 패널(150px + 높이) 아래로 */
+    margin-bottom: 1vh; /* 박스와의 간격 */
   }
 
+  /* 🆕 박스들을 음성 패널 아래로 조정 */
   .button-group {
-    height: 72vh;
+    height: 60vh; /* 높이 줄임 */
     display: flex;
     flex-direction: row;
     justify-content: center;
-    align-items: flex-start;
+    align-items: flex-start; /* 상단 정렬로 복원 */
     gap: 40px;
-    margin-bottom: 6vh;
+    margin-top: 0; /* 안내문구와 연결 */
+    margin-bottom: 2vh;
   }
 
   .mode-box {
     width: 40vw;
-    height: 64vh;
+    height: 55vh; /* 높이 줄임 */
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
@@ -60,9 +65,11 @@
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
-    padding: 4vh;
+    padding: 3vh; /* 패딩 줄임 */
     box-sizing: border-box;
-    gap: 3vh;
+    gap: 2vh; /* 간격 줄임 */
+    /* 🆕 박스를 적당히 위치 */
+    transform: translateY(2vh);
   }
 
   .mode-box img {
@@ -129,23 +136,31 @@
       font-size: 28px;
     }
 
+    /* 🆕 데스크탑에서 안내문구를 음성 패널 아래로 */
     h2 {
       height: 100px;
       font-size: 26px;
+      margin-top: 15vh; /* 음성 패널(180px + 높이) 아래로 */
+      margin-bottom: 2vh; /* 박스와의 간격 */
+      padding: 2vh 0;
     }
 
+    /* 🆕 데스크탑에서 박스들 위치 조정 */
     .button-group {
-      height: 60vh;
-      margin-top: 20px;
+      height: 50vh; /* 높이 줄임 */
+      margin-top: 0; /* 안내문구와 연결 */
       margin-bottom: 20px;
       gap: 100px;
+      align-items: flex-start; /* 상단 정렬 */
     }
 
     .mode-box {
       width: 400px;
-      height: 350px;
+      height: 320px; /* 높이 줄임 */
       padding: 20px;
-      gap: 20px;
+      gap: 15px; /* 간격 줄임 */
+      /* 🆕 데스크탑에서 박스를 적당한 위치로 */
+      transform: translateY(2vh);
     }
 
     .mode-box button {

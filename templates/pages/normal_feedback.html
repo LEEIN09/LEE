@@ -1,0 +1,86 @@
+<!-- public/pages/normal_feedback.html -->
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>일반운동 피드백 | SMILE FIT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=SUIT:wght@400;600&display=swap" rel="stylesheet" />
+    
+    <!-- 라이브러리 로드 -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- 조장님 페이지와 동일한 스타일 적용 -->
+    <style>
+        body { opacity: 0; transition: opacity 0.4s ease; margin: 0; padding: 0; font-family: 'SUIT', sans-serif; background: #f8f9fa; color: #333; text-align: center; }
+        body.loaded { opacity: 1; }
+        header { height: 14vh; background: linear-gradient(90deg, #69b7ff, #a17fff); color: white; font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: bold; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .home-button { position: fixed; top: 10px; left: 16px; background: #ff4081; color: white; padding: 4px 8px; font-weight: bold; border-radius: 6px; box-shadow: 0 0 8px #ff4081; z-index: 999; text-decoration: none; font-size: 14px; }
+        .container { padding: 24px; text-align: center; max-width: 100vw; overflow-x: hidden; }
+        .main-message { font-size: 20px; font-weight: bold; margin-bottom: 20px; }
+        #report { display: none; border-top: 3px solid #aaa; padding-top: 24px; }
+        .report-section { border: 1px solid #ccc; margin-bottom: 20px; border-radius: 8px; }
+        .image-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; padding-bottom: 10px; }
+        .image-row img { width: 60px; height: 80px; object-fit: cover; border-radius: 6px; border: 2px solid #999; }
+        .section-title { font-weight: bold; margin-bottom: 10px; font-size: 24px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+        .section-title2 { font-weight: bold; margin-top: 10px; margin-bottom: 10px; font-size: 18px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+        h4 { font-size: 18px; }
+        .row-box { display: flex; justify-content: center; align-items: flex-start; gap: 5vw; margin: 2vh 0; flex-wrap: wrap; max-width: 100vw; }
+        .feedback-box { flex: 1 1 40%; background: rgba(255, 255, 255, 0.07); border: 1px solid #ccc; border-radius: 12px; padding: 16px; min-width: 280px; max-width: 500px; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <a class="home-button" href="/">홈으로</a>
+    <header>SMILE FIT</header>
+
+    <div class="container">
+        <div class="main-message">운동을 완료했습니다!</div>
+        <div id="loading-message" style="display:block; margin-top: 50px; font-size: 20px; font-weight: bold; color: #666;">
+            <p>피드백 생성 중... 잠시만 기다려 주세요.</p>
+            <div class="spinner" style="border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #7983ff; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto;"></div>
+        </div>
+
+        <div id="report">
+            <div class="report-section">
+                <div class="section-title">SMILE FIT 결과 보고서 (<span id="report-mode-name"></span>) - <span id="report-date"></span></div>
+            </div>
+            <div class="report-section">
+                <div class="section-title2" id="reference-images-title">기준 사진</div>
+                <div id="reference-images" class="image-row"></div>
+            </div>
+            <div class="report-section" id="user-images-section">
+                <div class="section-title2" id="user-images-title">사용자 사진</div>
+                <div id="user-images" class="image-row"></div>
+            </div>
+            <div class="row-box">
+                <div class="feedback-box" id="pie-chart-container">
+                    <h4>가장 많이 사용된 근육 TOP 5</h4>
+                    <div style="display: flex; justify-content: center; align-items: center; margin-top: 30px; padding: 0; max-height: 180px;">
+                        <canvas id="topMusclePieChart" style="max-width: 180px;"></canvas>
+                        <ul id="pie-labels" style="margin-left: 40px; list-style: none; padding: 0; text-align: left;"></ul>
+                    </div>
+                </div>
+                <div class="feedback-box">
+                    <h4>오늘 사용한 근육 & 동작 리스트</h4>
+                    <ul id="top-expression-list" style="list-style: none; padding: 0; margin: 0; text-align: left;"></ul>
+                </div>
+            </div>
+            <div class="row-box">
+                <div class="feedback-box" id="similarity-chart-container">
+                    <h4 id="similarity-chart-title">라운드별 유사도</h4>
+                    <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="chart"></canvas>
+                    </div>
+                </div>
+                <div class="feedback-box">
+                    <h4>종합 피드백</h4>
+                    <div id="summary-text" style="white-space: pre-line; line-height: 24px; text-align: left;">분석 결과 요약이 여기에 표시됩니다.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

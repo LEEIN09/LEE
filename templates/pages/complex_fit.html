@@ -139,7 +139,40 @@
     video {
       transform: scaleX(-1); /* 좌우반전 */
     }
+    .mode-btn-style { /* 공통 버튼 스타일 (패딩, 폰트 등은 유지) */
+        padding: 18px 42px;
+        font-size: 20px;
+        font-weight: bold;
+        /* background-color: #4CAF50; */ /* 기본 배경색은 각 ID에서 지정하므로 주석 처리 또는 삭제 */
+        color: white; /* 글자색은 흰색 유지 또는 색상에 맞춰 변경 고려 */
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
 
+    /* 일반 복합운동 버튼 - 노란색 계열 */
+    #normal-mode-btn {
+        background-color: #FFEB3B; /* 밝은 노란색 */
+        color: #333; /* 노란색 배경에는 어두운 글자색이 더 잘 보일 수 있음 */
+    }
+
+    #normal-mode-btn:hover {
+        background-color: #FDD835; /* 살짝 진한 노란색 */
+        transform: translateY(-2px);
+    }
+
+    /* AU 분석 모드 버튼 - 자주색 계열 */
+    #au-mode-btn {
+        background-color: #9C27B0; /* 중간톤 자주색 */
+        color: white; /* 자주색 배경에는 흰색 글자 유지 */
+    }
+
+    #au-mode-btn:hover {
+        background-color: #7B1FA2; /* 살짝 진한 자주색 */
+        transform: translateY(-2px);
+    }
     .home-button {
       position: fixed;
       top: 10px;
@@ -170,9 +203,19 @@
       }
 
       h2.round-text {
-        height: 100px;
-        font-size: 26px;
-      }
+        height: 8vh;
+        font-size: 24px;
+        font-weight: 600; /* 기존 굵기 */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap; /* 내용이 길어질 경우 줄바꿈 허용 (선택 사항) */
+        text-align: center; /* 중앙 정렬 */
+        margin: 0 auto 15px auto; /* 위쪽 여백 0, 좌우 자동(중앙정렬 효과), 아래쪽 여백 15px */
+        padding: 1vh 2vh; /* 상하 안쪽 여백 1vh, 좌우 안쪽 여백 2vh */
+        line-height: 1.5; /* 줄 간격 보기 좋게 조정 */
+    }
+
 
       .main-content {
         height: 40vh;
@@ -213,10 +256,21 @@
   </style>
 </head>
 <body>
-  <a class="home-button" href="/">홈으로</a>
-  <header>SMILE FIT</header>
+    <header>SMILE FIT</header>
+    <a href="{{ url_for('index') }}" class="home-button">HOME</a>
 
-  <h2 class="round-text">ROUND <span id="round">1</span> / 10</h2>
+    <div class="mode-selection" style="text-align: center; margin-bottom: 30px;">
+        <button id="normal-mode-btn" class="mode-btn-style">일반 복합운동</button>
+        <button id="au-mode-btn" class="mode-btn-style">AU 분석 모드</button>
+    </div>
+  
+  <a class="home-button" href="/">홈으로</a>
+  <h2 class="round-text">
+    <span id="mode-info"></span>  ROUND   <span id="display-current-round"></span> / <span id="display-total-rounds"></span>
+    <span id="set-info-wrapper" style="display:none;">
+        (SET <span id="display-current-set"></span> / <span id="display-total-sets"></span>)
+    </span>
+</h2>
 
 <div class="main-content">
   <div class="image-box">      
@@ -233,5 +287,16 @@
     <button id="submit-btn">사진 제출</button>
   </div>
   <div id="check-mark">✅</div>
+
+  <!-- ▼▼▼▼▼ [추가된 부분] JavaScript 로직 ▼▼▼▼▼ -->
+  <script type="module">
+      import { init } from '/static/scripts/complex_fit.js';
+      // HTML 문서 로딩이 완료된 후 init 함수를 실행합니다.
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log("DOM Loaded, calling complex_fit.init()");
+        init();
+      });
+  </script>
+  <!-- ▲▲▲▲▲ [추가된 부분] 여기까지 ▲▲▲▲▲ -->
 </body>
 </html>

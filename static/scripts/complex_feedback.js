@@ -11,8 +11,8 @@ const MAX_CHANGES = {
   "상순비익거근": 0.143,
   "대관골근": 0.048,
   "익돌근": 0.09,
-  "상순절치근": 0.017,
-  "협근": 0.017,
+  "상순절치근": 0.043,
+  "협근": 0.045,
 };
 
 const MUSCLE_TO_ACTION = {
@@ -115,23 +115,46 @@ async function extractLandmarksFromImages(imageList) {
         const refDist = computeDist(refLandmarks[0], rule.points);
         const refExprDist = computeDist(refLandmarks[i], rule.points);
         const refDiff = refExprDist - refDist;
-        const refRatio = Math.abs(refDiff) / maxChange;
+        let refRatio = Math.abs(refDiff) / maxChange;
 
         const userDist = computeDist(userLandmarks[0], rule.points);
         const userExprDist = computeDist(userLandmarks[i], rule.points);
         const userDiff = userExprDist - userDist;
-        const userRatio = Math.abs(userDiff) / maxChange;
+        let userRatio = Math.abs(userDiff) / maxChange;
 
         // 볼근 예외 처리
-        if (muscle === "볼근" && rule.stable) {
+        if (muscle === "협근" && rule.stable) {
           const refStable = Math.abs(computeDist(refLandmarks[i], rule.stable) - computeDist(refLandmarks[0], rule.stable));
           const userStable = Math.abs(computeDist(userLandmarks[i], rule.stable) - computeDist(userLandmarks[0], rule.stable));
-          if (refStable > 0.01 || userStable > 0.01) {
-            continue; // 중앙 입술 변화 크면 제외
-          }
+
+          if (refStable > 0.01) {refRatio = 0;}
+          if (userStable > 0.01) {userRatio = 0;}
+        }
+
+        if (muscle === "상순절치근") {
+          const refChange = computeDist(refLandmarks[i], [14, 1]) - computeDist(refLandmarks[0], [14, 1]);
+          const userChange = computeDist(userLandmarks[i], [14, 1]) - computeDist(userLandmarks[0], [14, 1]);
+          const maxJaw = MAX_CHANGES["익돌근"] || 1;
+
+          if (Math.abs(refChange) > maxJaw / 5) {refRatio = 0;}
+          if (Math.abs(userChange) > maxJaw / 5) {userRatio = 0;}
+        }
+
+          // 대관골근 예외: 입 중심이 너무 안 벌어졌으면 무효
+
+        if (muscle === "대관골근") {
+          const refVertical = computeDist(refLandmarks[i], [13, 14]) - computeDist(refLandmarks[0], [13, 14]);
+          const userVertical = computeDist(userLandmarks[i], [13, 14]) - computeDist(userLandmarks[0], [13, 14]);
+
+          if (refVertical < 0.01) {refRatio = 0;}
+          if (userVertical < 0.01) {userRatio = 0;}
         }
 
         const score = 1 - Math.abs(refRatio - userRatio);  // 유사할수록 높음
+              console.log(`라운드 ${i} - ${muscle}`);
+      console.log(`  refRatio: ${refRatio.toFixed(3)}`);
+      console.log(`  userRatio: ${userRatio.toFixed(3)}`);
+      console.log(`  score: ${score.toFixed(3)}`);
         perMuscleScores.push(score);
       }
 
@@ -195,6 +218,15 @@ const pieColors = [
   "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#CCCCCC"
 ];
 
+function waitForImageLoad(base64) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64;
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+  });
+}
+
 export async function init() {
   document.body.classList.add("loaded");
   document.getElementById("analyze-btn").addEventListener("click", async () => {
@@ -210,16 +242,19 @@ export async function init() {
   const name = nameInput?.value.trim() || "";
   
   dateSpan.textContent = name ? `${today} - ${name}` : today;
-
+    
     const teacher = sessionStorage.getItem("selectedTeacher");
     const refImages = [`/static/images/teachers/${teacher}/neutral.png`];
     for (let i = 1; i <= 10; i++) refImages.push(`/static/images/teachers/${teacher}/${teacher}${i}.png`);
+
 
     const userNeutral = JSON.parse(sessionStorage.getItem("neutralImage"));
     const userImages = JSON.parse(sessionStorage.getItem("capturedImages") || "[]");
     const userAll = [userNeutral, ...userImages];
 
+    
     const refLandmarks = await extractLandmarksFromImages(refImages);
+    await new Promise(resolve => setTimeout(resolve, 200));
     const userLandmarks = await extractLandmarksFromImages(userAll);
 
     const similarityScores = evaluateRoundScores(refLandmarks, userLandmarks);
@@ -263,6 +298,11 @@ export async function init() {
           const maxJaw = MAX_CHANGES["익돌근"] || 1;
           if (Math.abs(verticalChange) > maxJaw / 5) activated = false;
         }
+
+        if (muscle === "대관골근") {
+          const verticalChange = computeDist(userLandmarks[i], [13, 14]) - computeDist(userLandmarks[0], [13, 14]);
+          if (verticalChange < 0.01) activated = false;
+}
 
         const ratio = Math.abs(diff) / (MAX_CHANGES[muscle] || 1);
         if (activated) usage += ratio;
@@ -366,9 +406,14 @@ export async function init() {
 
         // 구륜근 조건
         if (muscle === "상순절치근") {
-          const verticalChange = computeDist(userLandmarks[0], [14, 1]) - computeDist(userLandmarks[i], [14, 1]);
+          const verticalChange1 = computeDist(userLandmarks[0], [14, 1]) - computeDist(userLandmarks[i], [14, 1]);
           const maxJaw = MAX_CHANGES["익돌근"] || 1;
-          if (Math.abs(verticalChange) > maxJaw / 5) activated = false;
+          if (Math.abs(verticalChange1) > maxJaw / 5) activated = false;
+        }
+
+        if (muscle === "대관골근") {
+          const verticalChange2 = computeDist(userLandmarks[i], [13, 14]) - computeDist(userLandmarks[0], [13, 14]);
+          if (verticalChange2 < 0.01) activated = false;
         }
 
         if (activated) {
